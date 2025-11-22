@@ -1,0 +1,20 @@
+[package]
+name = "grpc"
+version = "0.1.0"
+edition = "2024"
+
+build = "build.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+common-config = { path = "../../crates/common-config" }
+telemetry = { path = "../../crates/telemetry" }
+workflow = { path = "../../crates/workflow" }
+tracing = { workspace = true }
+tokio = { workspace = true }
+tonic = { workspace = true }
+prost = "0.14.1"
+prost-types = "0.14.1"
+
+[build-dependencies]
+tonic-prost-build = "0.14.2"

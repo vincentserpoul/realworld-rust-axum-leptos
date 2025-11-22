@@ -1,0 +1,34 @@
+[package]
+name = "api"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+axum = { workspace = true }
+axum-extra = { workspace = true }
+axum-server = { workspace = true }
+chrono = { workspace = true }
+http = { workspace = true }
+http-problem = { path = "../../crates/http-problem" }
+hyper = { workspace = true }
+moka = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true }
+utoipa-swagger-ui = { workspace = true }
+uuid = { workspace = true }
+common-config = { path = "../../crates/common-config" }
+telemetry = { path = "../../crates/telemetry" }
+authz = { path = "../../crates/authz" }
+security = { path = "../../crates/security" }
+messaging = { path = "../../crates/messaging" }
+workflow = { path = "../../crates/workflow" }
+data = { path = "../../crates/data" }
+domain = { path = "../../crates/domain" }

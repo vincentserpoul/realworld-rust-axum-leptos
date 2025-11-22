@@ -1,0 +1,27 @@
+:80 {
+    @cors_preflight method OPTIONS
+    handle @cors_preflight {
+        header Access-Control-Allow-Origin "http://localhost:5173"
+        header Access-Control-Allow-Methods "POST, OPTIONS"
+        header Access-Control-Allow-Headers "Content-Type, Authorization, X-Trace-Id, X-Faro-Session-Id"
+        header Access-Control-Allow-Credentials "true"
+        respond "" 204
+    }
+
+    reverse_proxy http://otel-collector:4318 {
+        header_up Access-Control-Allow-Origin "http://localhost:5173"
+        header_up Access-Control-Allow-Methods "POST, OPTIONS"
+        header_up Access-Control-Allow-Headers "Content-Type, Authorization, X-Trace-Id, X-Faro-Session-Id"
+        header_up Access-Control-Allow-Credentials "true"
+        header_down Access-Control-Allow-Origin "http://localhost:5173"
+        header_down Access-Control-Allow-Methods "POST, OPTIONS"
+        header_down Access-Control-Allow-Credentials "true"
+        header_down Access-Control-Allow-Headers "Content-Type, Authorization, X-Trace-Id, X-Faro-Session-Id"
+    }
+
+    log {
+        output stdout
+        level DEBUG
+        format json
+    }
+}
