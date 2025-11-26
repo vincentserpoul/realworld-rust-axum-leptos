@@ -18,6 +18,12 @@ use uuid::Uuid;
 #[derive(Clone)]
 pub struct WorkflowState(Arc<RwLock<HashMap<Uuid, WorkflowStatus>>>);
 
+impl Default for WorkflowState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WorkflowState {
     pub fn new() -> Self {
         Self(Arc::new(RwLock::new(HashMap::new())))

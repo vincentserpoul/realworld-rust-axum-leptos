@@ -10,6 +10,7 @@ axum = { workspace = true }
 axum-extra = { workspace = true }
 axum-server = { workspace = true }
 chrono = { workspace = true }
+deadpool-postgres = { workspace = true }
 http = { workspace = true }
 http-problem = { path = "../../crates/http-problem" }
 hyper = { workspace = true }
@@ -18,6 +19,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 tokio-stream = { workspace = true }
+tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-uuid-1"] }
 tower = { workspace = true }
 tower-http = { workspace = true }
 tracing = { workspace = true }
@@ -32,3 +34,6 @@ messaging = { path = "../../crates/messaging" }
 workflow = { path = "../../crates/workflow" }
 data = { path = "../../crates/data" }
 domain = { path = "../../crates/domain" }
+
+[dev-dependencies]
+tower = { workspace = true, features = ["util"] }

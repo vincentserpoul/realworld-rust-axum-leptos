@@ -5,11 +5,27 @@ edition = "2024"
 
 [dependencies]
 anyhow = { workspace = true }
+clorinde = { workspace = true }
 chrono = { workspace = true }
 common-config = { path = "../common-config" }
 deadpool-postgres = { workspace = true }
+futures = "0.3"
+postgres-types = { version = "0.2", features = ["derive"] }
+postgres-protocol = "0.6"
+tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-uuid-1"] }
 serde = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 uuid = { workspace = true }
+domain = { path = "../domain" }
+async-trait = { workspace = true }
+
+[dev-dependencies]
+testcontainers = { workspace = true }
+testcontainers-modules = { workspace = true }
+
+[features]
+default = ["deadpool"]
+deadpool = []
+wasm-async = []

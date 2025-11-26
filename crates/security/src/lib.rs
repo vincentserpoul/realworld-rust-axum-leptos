@@ -56,21 +56,21 @@ impl SignedRequestVerifier {
     }
 
     async fn verify(&self, request: Request<Body>) -> Result<Request<Body>, ProblemDetails> {
-        let key_id = self.extract_header(&request, HEADER_KEY_ID)?;
-        if let Some(required) = &self.required_key_id {
-            if &key_id != required {
-                return Err(unauthorized("unexpected key id"));
-            }
+        let key_id = self.extract_header(&request, HEADER_KEY_ID).map_err(|e| *e)?;
+        if let Some(required) = &self.required_key_id
+            && &key_id != required
+        {
+            return Err(unauthorized("unexpected key id"));
         }
 
         let verifier = self
             .keys
             .get(&key_id)
             .ok_or_else(|| unauthorized("unknown key id"))?;
-        let signature = self.decode_signature(&request)?;
-        let timestamp_raw = self.extract_header(&request, HEADER_TIMESTAMP)?;
-        let timestamp = parse_timestamp(&timestamp_raw)?;
-        ensure_tolerance(timestamp, self.tolerance)?;
+        let signature = self.decode_signature(&request).map_err(|e| *e)?;
+        let timestamp_raw = self.extract_header(&request, HEADER_TIMESTAMP).map_err(|e| *e)?;
+        let timestamp = parse_timestamp(&timestamp_raw).map_err(|e| *e)?;
+        ensure_tolerance(timestamp, self.tolerance).map_err(|e| *e)?;
 
         let (parts, body) = request.into_parts();
         let body_bytes = buffer_body(body).await?;
@@ -87,23 +87,23 @@ impl SignedRequestVerifier {
         &self,
         request: &Request<Body>,
         name: &str,
-    ) -> Result<String, ProblemDetails> {
+    ) -> Result<String, Box<ProblemDetails>> {
         request
             .headers()
             .get(name)
             .and_then(|value| value.to_str().ok())
             .map(|s| s.to_string())
-            .ok_or_else(|| unauthorized(&format!("missing header {name}")))
+            .ok_or_else(|| Box::new(unauthorized(&format!("missing header {name}"))))
     }
 
-    fn decode_signature(&self, request: &Request<Body>) -> Result<Signature, ProblemDetails> {
+    fn decode_signature(&self, request: &Request<Body>) -> Result<Signature, Box<ProblemDetails>> {
         let encoded = self.extract_header(request, HEADER_SIGNATURE)?;
         let raw = BASE64
             .decode(encoded.as_bytes())
-            .map_err(|_| unauthorized("invalid signature encoding"))?;
+            .map_err(|_| Box::new(unauthorized("invalid signature encoding")))?;
         let bytes: [u8; 64] = raw
             .try_into()
-            .map_err(|_| unauthorized("invalid signature length"))?;
+            .map_err(|_| Box::new(unauthorized("invalid signature length")))?;
         Ok(Signature::from_bytes(&bytes))
     }
 }
@@ -133,26 +133,26 @@ fn canonical_message(parts: &http::request::Parts, timestamp: &str, body: &[u8])
     canonical
 }
 
-fn parse_timestamp(value: &str) -> Result<DateTime<Utc>, ProblemDetails> {
+fn parse_timestamp(value: &str) -> Result<DateTime<Utc>, Box<ProblemDetails>> {
     if let Ok(dt) = DateTime::parse_from_rfc3339(value) {
         return Ok(dt.with_timezone(&Utc));
     }
 
-    if let Ok(secs) = value.parse::<i64>() {
-        if let Some(dt) = Utc.timestamp_opt(secs, 0).single() {
-            return Ok(dt);
-        }
+    if let Ok(secs) = value.parse::<i64>()
+        && let Some(dt) = Utc.timestamp_opt(secs, 0).single()
+    {
+        return Ok(dt);
     }
 
-    Err(unauthorized("invalid timestamp"))
+    Err(Box::new(unauthorized("invalid timestamp")))
 }
 
-fn ensure_tolerance(timestamp: DateTime<Utc>, tolerance: Duration) -> Result<(), ProblemDetails> {
+fn ensure_tolerance(timestamp: DateTime<Utc>, tolerance: Duration) -> Result<(), Box<ProblemDetails>> {
     let chrono_tol =
         ChronoDuration::from_std(tolerance).unwrap_or_else(|_| ChronoDuration::seconds(5));
     let delta = (Utc::now() - timestamp).abs();
     if delta > chrono_tol {
-        Err(unauthorized("timestamp outside allowed skew"))
+        Err(Box::new(unauthorized("timestamp outside allowed skew")))
     } else {
         Ok(())
     }

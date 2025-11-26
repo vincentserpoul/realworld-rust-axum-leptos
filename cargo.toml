@@ -2,7 +2,6 @@
 resolver = "3"
 members = [
 	"apps/api",
-	"apps/grpc",
 	"crates/authz",
 	"crates/common-config",
 	"crates/domain",
@@ -55,3 +54,7 @@ utoipa = { version = "5.4.0", features = ["axum_extras", "yaml", "time", "uuid"]
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
 uuid = { version = "1.18.1", features = ["serde", "v4"] }
 bytes = "1.11.0"
+
+# Test dependencies
+testcontainers = "0.23.1"
+testcontainers-modules = { version = "0.11.3", features = ["postgres"] }

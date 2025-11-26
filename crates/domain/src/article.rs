@@ -26,10 +26,10 @@ impl Slug {
         for ch in title.trim().chars() {
             if ch.is_ascii_alphanumeric() {
                 slug.push(ch.to_ascii_lowercase());
-            } else if ch.is_whitespace() || matches!(ch, '-' | '_' | ':') {
-                if !slug.ends_with('-') {
-                    slug.push('-');
-                }
+            } else if (ch.is_whitespace() || matches!(ch, '-' | '_' | ':'))
+                && !slug.ends_with('-')
+            {
+                slug.push('-');
             }
         }
         let slug = slug.trim_matches('-');
@@ -193,6 +193,34 @@ impl Article {
     pub fn authored_by(&self, user_id: &UserId) -> bool {
         &self.author_id == user_id
     }
+
+    /// Find article by slug in a collection
+    pub fn find_by_slug<'a>(articles: &'a [Article], slug: &str) -> Option<&'a Article> {
+        articles.iter().find(|a| a.slug.as_str() == slug)
+    }
+
+    /// Find article by slug in a collection (owned)
+    pub fn find_by_slug_owned(articles: &[Article], slug: &str) -> Option<Article> {
+        articles.iter().find(|a| a.slug.as_str() == slug).cloned()
+    }
+
+    /// Create a new article from draft with validation and return view
+    pub fn create_from_draft(
+        id: ArticleId,
+        author_id: UserId,
+        draft: ArticleDraft,
+        author_profile: Profile,
+        now: DateTime<Utc>,
+    ) -> DomainResult<(Self, ArticleView)> {
+        let article = Self::publish(id, author_id, draft, now)?;
+        let view = article.to_view(author_profile, false);
+        Ok((article, view))
+    }
+
+    /// Build an article view with author profile and favorite status
+    pub fn build_view(&self, author: Profile, favorited: bool) -> ArticleView {
+        self.to_view(author, favorited)
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -282,18 +310,10 @@ impl ArticleFilters {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct FeedFilters {
     #[serde(flatten)]
     pub pagination: Pagination,
-}
-
-impl Default for FeedFilters {
-    fn default() -> Self {
-        Self {
-            pagination: Pagination::default(),
-        }
-    }
 }
 
 impl FeedFilters {

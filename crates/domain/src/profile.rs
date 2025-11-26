@@ -32,6 +32,15 @@ impl Profile {
     pub fn unfollow(&mut self) {
         self.following = false;
     }
+
+    /// Validate that a follow/unfollow action is allowed
+    /// Returns error if user tries to follow/unfollow themselves
+    pub fn validate_follow_action(target_id: &crate::UserId, follower_id: &crate::UserId) -> crate::DomainResult<()> {
+        if target_id == follower_id {
+            return Err(crate::DomainError::UnauthorizedAction);
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

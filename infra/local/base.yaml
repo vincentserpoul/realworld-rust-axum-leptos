@@ -117,7 +117,7 @@ services:
       - realworld
 
   restate:
-    image: docker.restate.dev/public/restate-server:0.9.0
+    image: docker.io/restatedev/restate:0.9.0
     restart: always
     command:
       [

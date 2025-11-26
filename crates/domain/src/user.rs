@@ -74,7 +74,7 @@ impl PlainPassword {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
 pub struct PasswordHash(String);
 
 impl PasswordHash {
@@ -88,12 +88,6 @@ impl PasswordHash {
 
     pub fn as_str(&self) -> &str {
         &self.0
-    }
-}
-
-impl Default for PasswordHash {
-    fn default() -> Self {
-        Self(String::new())
     }
 }
 
