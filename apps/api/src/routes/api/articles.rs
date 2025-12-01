@@ -5,9 +5,13 @@ use axum::{
 };
 use chrono::Utc;
 use domain::{
-    Article, ArticleChanges, ArticleDraft, ArticleEnvelope, ArticleFilters, ArticleId,
-    ArticlesEnvelope, Comment, CommentDraft, CommentEnvelope, CommentId, CommentsEnvelope,
-    FeedFilters, Pagination, TagList,
+    ArticleEnvelope, ArticlesEnvelope, CommentEnvelope, CommentId, CommentsEnvelope,
+    use_cases::{
+        create_article, create_comment, delete_article, delete_comment, favorite_article,
+        feed_articles, get_article, list_articles, list_comments, unfavorite_article,
+        update_article, CreateArticleInput, CreateCommentInput, FeedArticlesInput,
+        ListArticlesInput, UpdateArticleInput,
+    },
 };
 use serde::Deserialize;
 
@@ -24,18 +28,18 @@ where
     C: domain::repositories::CommentsRepository + Clone + 'static,
 {
     Router::<AppState<U, A, C>>::new()
-        .route("/", get(list_articles).post(create_article))
-        .route("/feed", get(feed_articles))
+        .route("/", get(list_articles_handler).post(create_article_handler))
+        .route("/feed", get(feed_articles_handler))
         .route(
             "/:slug",
-            get(get_article).put(update_article).delete(delete_article),
+            get(get_article_handler).put(update_article_handler).delete(delete_article_handler),
         )
         .route(
             "/:slug/favorite",
-            post(favorite_article).delete(unfavorite_article),
+            post(favorite_article_handler).delete(unfavorite_article_handler),
         )
-        .route("/:slug/comments", get(list_comments).post(create_comment))
-        .route("/:slug/comments/:id", delete(delete_comment))
+        .route("/:slug/comments", get(list_comments_handler).post(create_comment_handler))
+        .route("/:slug/comments/:id", delete(delete_comment_handler))
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -53,7 +57,7 @@ struct FeedQuery {
     offset: Option<u32>,
 }
 
-async fn list_articles<U, A, C>(
+async fn list_articles_handler<U, A, C>(
     State(state): State<AppState<U, A, C>>,
     Query(query): Query<ListQuery>,
     _current_user: Option<CurrentUser>,
@@ -63,14 +67,19 @@ where
     A: domain::repositories::ArticlesRepository + Clone,
     C: domain::repositories::CommentsRepository + Clone,
 {
-    let pagination = Pagination::new(query.limit, query.offset)?;
-    let filters = ArticleFilters::new(query.tag, query.author, query.favorited, Some(pagination))?;
+    let input = ListArticlesInput {
+        tag: query.tag,
+        author: query.author,
+        favorited: query.favorited,
+        limit: query.limit,
+        offset: query.offset,
+    };
 
-    let envelope = state.use_cases.articles_repo.list_articles(filters).await?;
+    let envelope = list_articles(&state.use_cases.articles_repo, input).await?;
     Ok(Json(envelope))
 }
 
-async fn feed_articles<U, A, C>(
+async fn feed_articles_handler<U, A, C>(
     State(state): State<AppState<U, A, C>>,
     Query(query): Query<FeedQuery>,
     CurrentUser { user, .. }: CurrentUser,
@@ -80,9 +89,12 @@ where
     A: domain::repositories::ArticlesRepository + Clone,
     C: domain::repositories::CommentsRepository + Clone,
 {
-    let pagination = Pagination::new(query.limit, query.offset)?;
-    let filters = FeedFilters::new(Some(pagination));
-    let envelope = state.use_cases.articles_repo.feed_articles(user.id, filters).await?;
+    let input = FeedArticlesInput {
+        limit: query.limit,
+        offset: query.offset,
+    };
+
+    let envelope = feed_articles(&state.use_cases.articles_repo, user.id, input).await?;
     Ok(Json(envelope))
 }
 
@@ -124,7 +136,7 @@ struct CommentPayload {
     body: String,
 }
 
-async fn create_article<U, A, C>(
+async fn create_article_handler<U, A, C>(
     State(state): State<AppState<U, A, C>>,
     CurrentUser { user, .. }: CurrentUser,
     Json(req): Json<CreateArticleRequest>,
@@ -134,32 +146,27 @@ where
     A: domain::repositories::ArticlesRepository + Clone,
     C: domain::repositories::CommentsRepository + Clone,
 {
-    let ArticlePayload {
-        title,
-        description,
-        body,
-        tag_list,
-    } = req.article;
+    let input = CreateArticleInput {
+        title: req.article.title,
+        description: req.article.description,
+        body: req.article.body,
+        tag_list: req.article.tag_list,
+    };
 
-    let tags = TagList::new(tag_list)?;
-    let draft = ArticleDraft::new(title, description, body, tags)?;
-    
-    let profile = user.to_profile(false);
-    let (article, _view) = Article::create_from_draft(
-        ArticleId::random(),
+    let author_profile = user.to_profile(false);
+    let view = create_article(
+        &state.use_cases.articles_repo,
         user.id,
-        draft,
-        profile,
+        author_profile,
+        input,
         Utc::now(),
-    )?;
-    
-    let created = state.use_cases.articles_repo.create_article(article).await?;
-    let profile = user.to_profile(false);
-    let view = Article::build_view(&created, profile, false);
+    )
+    .await?;
+
     Ok(Json(ArticleEnvelope::from(view)))
 }
 
-async fn get_article<U, A, C>(
+async fn get_article_handler<U, A, C>(
     State(state): State<AppState<U, A, C>>,
     Path(slug): Path<String>,
     current_user: Option<CurrentUser>,
@@ -169,28 +176,21 @@ where
     A: domain::repositories::ArticlesRepository + Clone,
     C: domain::repositories::CommentsRepository + Clone,
 {
-    let article = state.use_cases.articles_repo.get_article_by_slug(&slug).await?
-        .ok_or_else(|| ApiError::not_found("article"))?;
-
     let viewer_id = current_user.as_ref().map(|current| current.user.id);
-    let author = state.use_cases.users_repo.get_user_by_id(article.author_id).await?
-        .ok_or_else(|| ApiError::not_found("author"))?;
-    let following = if let Some(viewer) = viewer_id {
-        state.use_cases.users_repo.is_following(viewer, article.author_id).await.unwrap_or(false)
-    } else {
-        false
-    };
-    let profile = author.to_profile(following);
-    let favorited = if let Some(viewer) = viewer_id {
-        state.use_cases.articles_repo.is_favorited(viewer, article.id).await.unwrap_or(false)
-    } else {
-        false
-    };
-    let view = Article::build_view(&article, profile, favorited);
+
+    let view = get_article(
+        &state.use_cases.users_repo,
+        &state.use_cases.articles_repo,
+        &slug,
+        viewer_id,
+    )
+    .await
+    .map_err(|_| ApiError::not_found("article"))?;
+
     Ok(Json(ArticleEnvelope::from(view)))
 }
 
-async fn update_article<U, A, C>(
+async fn update_article_handler<U, A, C>(
     State(state): State<AppState<U, A, C>>,
     CurrentUser { user, .. }: CurrentUser,
     Path(slug): Path<String>,
@@ -201,45 +201,34 @@ where
     A: domain::repositories::ArticlesRepository + Clone,
     C: domain::repositories::CommentsRepository + Clone,
 {
-    let UpdateArticlePayload {
-        title,
-        description,
-        body,
-        tag_list,
-    } = req.article;
-
-    let mut article = state.use_cases.articles_repo
-        .get_article_by_slug(&slug)
-        .await?
-        .ok_or_else(|| ApiError::not_found("article"))?;
-
-    if article.author_id != user.id {
-        return Err(ApiError::unauthorized("cannot edit another user's article"));
-    }
-
-    let mut changes = ArticleChanges {
-        title,
-        description,
-        body,
-        ..Default::default()
+    let input = UpdateArticleInput {
+        title: req.article.title,
+        description: req.article.description,
+        body: req.article.body,
+        tag_list: req.article.tag_list,
     };
-    if let Some(tags) = tag_list {
-        changes.tag_list = Some(TagList::new(tags)?);
-    }
 
-    article.apply_changes(changes, Utc::now())?;
-    let updated = state.use_cases.articles_repo.update_article(article).await?;
+    let view = update_article(
+        &state.use_cases.users_repo,
+        &state.use_cases.articles_repo,
+        &slug,
+        user.id,
+        input,
+        Utc::now(),
+    )
+    .await
+    .map_err(|e| match e {
+        domain::DomainError::NotFound { .. } => ApiError::not_found("article"),
+        domain::DomainError::UnauthorizedAction => {
+            ApiError::unauthorized("cannot edit another user's article")
+        }
+        _ => ApiError::from(e),
+    })?;
 
-    let favorited = state.use_cases.articles_repo
-        .is_favorited(user.id, updated.id)
-        .await
-        .unwrap_or(false);
-    let profile = user.to_profile(false);
-    let view = updated.to_view(profile, favorited);
     Ok(Json(ArticleEnvelope::from(view)))
 }
 
-async fn delete_article<U, A, C>(
+async fn delete_article_handler<U, A, C>(
     State(state): State<AppState<U, A, C>>,
     CurrentUser { user, .. }: CurrentUser,
     Path(slug): Path<String>,
@@ -249,20 +238,14 @@ where
     A: domain::repositories::ArticlesRepository + Clone,
     C: domain::repositories::CommentsRepository + Clone,
 {
-    let article = state.use_cases.articles_repo
-        .get_article_by_slug(&slug)
-        .await?
-        .ok_or_else(|| ApiError::not_found("article"))?;
+    delete_article(&state.use_cases.articles_repo, &slug, user.id)
+        .await
+        .map_err(|_| ApiError::not_found("article"))?;
 
-    if article.author_id != user.id {
-        return Err(ApiError::not_found("article"));
-    }
-
-    state.use_cases.articles_repo.delete_article(article.id).await?;
     Ok(())
 }
 
-async fn favorite_article<U, A, C>(
+async fn favorite_article_handler<U, A, C>(
     State(state): State<AppState<U, A, C>>,
     CurrentUser { user, .. }: CurrentUser,
     Path(slug): Path<String>,
@@ -272,32 +255,19 @@ where
     A: domain::repositories::ArticlesRepository + Clone,
     C: domain::repositories::CommentsRepository + Clone,
 {
-    let article = state.use_cases.articles_repo
-        .get_article_by_slug(&slug)
-        .await?
-        .ok_or_else(|| ApiError::not_found("article"))?;
+    let view = favorite_article(
+        &state.use_cases.users_repo,
+        &state.use_cases.articles_repo,
+        &slug,
+        user.id,
+    )
+    .await
+    .map_err(|_| ApiError::not_found("article"))?;
 
-    state.use_cases.articles_repo.favorite_article(user.id, article.id).await?;
-
-    let updated = state.use_cases.articles_repo
-        .get_article_by_id(article.id)
-        .await?
-        .unwrap();
-
-    let author = state.use_cases.users_repo
-        .get_user_by_id(updated.author_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found("author"))?;
-    let following = state.use_cases.users_repo
-        .is_following(user.id, author.id)
-        .await
-        .unwrap_or(false);
-    let profile = author.to_profile(following);
-    let view = updated.to_view(profile, true);
     Ok(Json(ArticleEnvelope::from(view)))
 }
 
-async fn unfavorite_article<U, A, C>(
+async fn unfavorite_article_handler<U, A, C>(
     State(state): State<AppState<U, A, C>>,
     CurrentUser { user, .. }: CurrentUser,
     Path(slug): Path<String>,
@@ -307,36 +277,19 @@ where
     A: domain::repositories::ArticlesRepository + Clone,
     C: domain::repositories::CommentsRepository + Clone,
 {
-    let article = state.use_cases.articles_repo
-        .get_article_by_slug(&slug)
-        .await?
-        .ok_or_else(|| ApiError::not_found("article"))?;
+    let view = unfavorite_article(
+        &state.use_cases.users_repo,
+        &state.use_cases.articles_repo,
+        &slug,
+        user.id,
+    )
+    .await
+    .map_err(|_| ApiError::not_found("article"))?;
 
-    state.use_cases.articles_repo.unfavorite_article(user.id, article.id).await?;
-
-    let updated = state.use_cases.articles_repo
-        .get_article_by_id(article.id)
-        .await?
-        .unwrap();
-
-    let author = state.use_cases.users_repo
-        .get_user_by_id(updated.author_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found("author"))?;
-    let following = state.use_cases.users_repo
-        .is_following(user.id, author.id)
-        .await
-        .unwrap_or(false);
-    let profile = author.to_profile(following);
-    let favorited = state.use_cases.articles_repo
-        .is_favorited(user.id, updated.id)
-        .await
-        .unwrap_or(false);
-    let view = updated.to_view(profile, favorited);
     Ok(Json(ArticleEnvelope::from(view)))
 }
 
-async fn list_comments<U, A, C>(
+async fn list_comments_handler<U, A, C>(
     State(state): State<AppState<U, A, C>>,
     Path(slug): Path<String>,
     current_user: Option<CurrentUser>,
@@ -346,39 +299,22 @@ where
     A: domain::repositories::ArticlesRepository + Clone,
     C: domain::repositories::CommentsRepository + Clone,
 {
-    let article = state.use_cases.articles_repo
-        .get_article_by_slug(&slug)
-        .await?
-        .ok_or_else(|| ApiError::not_found("article"))?;
     let viewer_id = current_user.as_ref().map(|current| current.user.id);
 
-    let mut comments = state.use_cases.comments_repo
-        .get_comments_by_article(article.id)
-        .await?;
-    comments.sort_by(|a, b| b.created_at.cmp(&a.created_at));
-
-    let mut views = Vec::with_capacity(comments.len());
-    for comment in comments {
-        let author = state.use_cases.users_repo
-            .get_user_by_id(comment.author_id)
-            .await?
-            .ok_or_else(|| ApiError::not_found("author"))?;
-        let following = if let Some(viewer) = viewer_id {
-            state.use_cases.users_repo
-                .is_following(viewer, author.id)
-                .await
-                .unwrap_or(false)
-        } else {
-            false
-        };
-        let profile = author.to_profile(following);
-        views.push(comment.to_view(profile));
-    }
+    let views = list_comments(
+        &state.use_cases.users_repo,
+        &state.use_cases.articles_repo,
+        &state.use_cases.comments_repo,
+        &slug,
+        viewer_id,
+    )
+    .await
+    .map_err(|_| ApiError::not_found("article"))?;
 
     Ok(Json(CommentsEnvelope::from(views)))
 }
 
-async fn create_comment<U, A, C>(
+async fn create_comment_handler<U, A, C>(
     State(state): State<AppState<U, A, C>>,
     CurrentUser { user, .. }: CurrentUser,
     Path(slug): Path<String>,
@@ -389,28 +325,26 @@ where
     A: domain::repositories::ArticlesRepository + Clone,
     C: domain::repositories::CommentsRepository + Clone,
 {
-    let article = state.use_cases.articles_repo
-        .get_article_by_slug(&slug)
-        .await?
-        .ok_or_else(|| ApiError::not_found("article"))?;
+    let input = CreateCommentInput {
+        body: req.comment.body,
+    };
 
-    let draft = CommentDraft::new(req.comment.body)?;
-    let comment = Comment::new(
-        CommentId::new(0), // DB will generate proper ID
-        article.id,
+    let view = create_comment(
+        &state.use_cases.users_repo,
+        &state.use_cases.articles_repo,
+        &state.use_cases.comments_repo,
+        &slug,
         user.id,
-        draft,
-        Utc::now()
-    );
+        input,
+        Utc::now(),
+    )
+    .await
+    .map_err(|_| ApiError::not_found("article"))?;
 
-    let created = state.use_cases.comments_repo.create_comment(comment).await?;
-
-    let profile = user.to_profile(false);
-    let view = created.to_view(profile);
     Ok(Json(CommentEnvelope::from(view)))
 }
 
-async fn delete_comment<U, A, C>(
+async fn delete_comment_handler<U, A, C>(
     State(state): State<AppState<U, A, C>>,
     CurrentUser { user, .. }: CurrentUser,
     Path((slug, id)): Path<(String, i64)>,
@@ -420,26 +354,18 @@ where
     A: domain::repositories::ArticlesRepository + Clone,
     C: domain::repositories::CommentsRepository + Clone,
 {
-    let article = state.use_cases.articles_repo
-        .get_article_by_slug(&slug)
-        .await?
-        .ok_or_else(|| ApiError::not_found("article"))?;
-
     let comment_id = CommentId::new(id);
-    let comment = state.use_cases.comments_repo
-        .get_comment_by_id(comment_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found("comment"))?;
 
-    if comment.article_id != article.id {
-        return Err(ApiError::not_found("comment"));
-    }
+    delete_comment(
+        &state.use_cases.articles_repo,
+        &state.use_cases.comments_repo,
+        &slug,
+        comment_id,
+        user.id,
+    )
+    .await
+    .map_err(|_| ApiError::not_found("comment"))?;
 
-    if comment.author_id != user.id {
-        return Err(ApiError::not_found("comment"));
-    }
-
-    state.use_cases.comments_repo.delete_comment(comment_id).await?;
     Ok(())
 }
 

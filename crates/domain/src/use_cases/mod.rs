@@ -1,11 +1,33 @@
-/// Use cases / application logic
-///
-/// Each use case represents a single business operation and orchestrates
-/// domain entities, services, and repositories to accomplish it.
+//! Use cases / application logic
+//!
+//! Each use case represents a single business operation and orchestrates
+//! domain entities, services, and repositories to accomplish it.
+//!
+//! Use cases are organized by domain aggregate:
+//! - `articles` - Article CRUD, favorites, feed
+//! - `users` - Registration, login, profile updates
+//! - `profiles` - Follow/unfollow users
+//! - `comments` - Article comments
+
+pub mod articles;
+pub mod comments;
+pub mod profiles;
+pub mod users;
+
+// Re-export all use cases for convenient access
+pub use articles::*;
+pub use comments::*;
+pub use profiles::*;
+pub use users::*;
+
 use crate::repositories::{ArticlesRepository, CommentsRepository, UsersRepository};
 
-/// Container for all use cases with injected dependencies
-pub struct UseCases<U, A, C> 
+/// Container for all repositories with injected dependencies
+///
+/// This struct holds references to all repositories and can be used
+/// to access them in a unified way. Use case functions are standalone
+/// and receive repository references as parameters.
+pub struct UseCases<U, A, C>
 where
     U: UsersRepository,
     A: ArticlesRepository,

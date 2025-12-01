@@ -1,7 +1,11 @@
 use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::post};
 use chrono::Utc;
 use domain::{
-    AuthToken, Email, PasswordHash, PlainPassword, User, UserEnvelope, UserId, Username,
+    AuthToken, PlainPassword, UserEnvelope,
+    use_cases::{
+        login_user, register_user,
+        LoginUserInput as LoginInput, RegisterUserInput as RegisterInput,
+    },
 };
 use serde::Deserialize;
 use uuid::Uuid;
@@ -18,8 +22,8 @@ where
     C: domain::repositories::CommentsRepository + Clone + 'static,
 {
     Router::<AppState<U, A, C>>::new()
-        .route("/", post(register_user))
-        .route("/login", post(login_user))
+        .route("/", post(register_user_handler))
+        .route("/login", post(login_user_handler))
 }
 
 #[derive(Debug, Deserialize)]
@@ -45,7 +49,7 @@ struct LoginPayload {
     password: String,
 }
 
-async fn register_user<U, A, C>(
+async fn register_user_handler<U, A, C>(
     State(state): State<AppState<U, A, C>>,
     Json(req): Json<RegisterRequest>,
 ) -> ApiResult<impl IntoResponse>
@@ -54,34 +58,35 @@ where
     A: domain::repositories::ArticlesRepository + Clone,
     C: domain::repositories::CommentsRepository + Clone,
 {
-    let RegisterPayload {
-        username,
-        email,
-        password,
-    } = req.user;
-
-    let username = Username::new(username)?;
-    let email = Email::parse(email)?;
-    let password = PlainPassword::new(password)?;
-
+    let password = PlainPassword::new(req.user.password)?;
     let password_hash = hash_password(&password)?;
-    let now = Utc::now();
-    let user = User::new(UserId::random(), email.clone(), username, password_hash, now);
 
-    if state.use_cases.users_repo.get_user_by_email(email.as_str()).await?.is_some() {
-        return Err(ApiError::conflict("email already registered"));
-    }
-    
-    let user = state.use_cases.users_repo.create_user(user).await?;
+    let input = RegisterInput {
+        username: req.user.username,
+        email: req.user.email,
+        password_hash,
+    };
+
+    let output = register_user(&state.use_cases.users_repo, input, Utc::now())
+        .await
+        .map_err(|e| match e {
+            domain::DomainError::Conflict { entity: "email" } => {
+                ApiError::conflict("email already registered")
+            }
+            domain::DomainError::Conflict { entity: "username" } => {
+                ApiError::conflict("username already taken")
+            }
+            _ => ApiError::from(e),
+        })?;
 
     let token = issue_token()?;
-    remember_session(&state, &token, user.id).await;
-    let view = user.to_view(Some(token));
+    remember_session(&state, &token, output.user.id).await;
 
+    let view = output.user.to_view(Some(token));
     Ok((StatusCode::CREATED, Json(UserEnvelope::from(view))))
 }
 
-async fn login_user<U, A, C>(
+async fn login_user_handler<U, A, C>(
     State(state): State<AppState<U, A, C>>,
     Json(req): Json<LoginRequest>,
 ) -> ApiResult<impl IntoResponse>
@@ -90,35 +95,35 @@ where
     A: domain::repositories::ArticlesRepository + Clone,
     C: domain::repositories::CommentsRepository + Clone,
 {
-    let LoginPayload { email, password } = req.user;
-    let email = Email::parse(email)?;
-    let password = PlainPassword::new(password)?;
+    let password = PlainPassword::new(req.user.password)?;
     let password_hash = hash_password(&password)?;
 
-    let Some(user) = state.use_cases.users_repo.get_user_by_email(email.as_str()).await? else {
-        return Err(ApiError::unauthorized("invalid credentials"));
+    let input = LoginInput {
+        email: req.user.email,
+        password_hash,
     };
 
-    if user.password_hash != password_hash {
-        return Err(ApiError::unauthorized("invalid credentials"));
-    }
+    let output = login_user(&state.use_cases.users_repo, input)
+        .await
+        .map_err(|_| ApiError::unauthorized("invalid credentials"))?;
 
     let token = issue_token()?;
-    remember_session(&state, &token, user.id).await;
-    let view = user.to_view(Some(token));
+    remember_session(&state, &token, output.user.id).await;
+
+    let view = output.user.to_view(Some(token));
     Ok(Json(UserEnvelope::from(view)))
 }
 
-pub(crate) fn hash_password(password: &PlainPassword) -> ApiResult<PasswordHash> {
+pub(crate) fn hash_password(password: &PlainPassword) -> ApiResult<domain::PasswordHash> {
     let salted = format!("hashed:{}", password.as_str());
-    PasswordHash::new(salted).map_err(ApiError::from)
+    domain::PasswordHash::new(salted).map_err(ApiError::from)
 }
 
 fn issue_token() -> ApiResult<AuthToken> {
     AuthToken::new(Uuid::new_v4().to_string()).map_err(ApiError::from)
 }
 
-async fn remember_session<U, A, C>(state: &AppState<U, A, C>, token: &AuthToken, user_id: UserId)
+async fn remember_session<U, A, C>(state: &AppState<U, A, C>, token: &AuthToken, user_id: domain::UserId)
 where
     U: domain::repositories::UsersRepository + Clone,
     A: domain::repositories::ArticlesRepository + Clone,
@@ -134,8 +139,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use domain::repositories::UsersRepository;
     use axum::{body::Body, http::{Request, StatusCode}};
+    use domain::repositories::UsersRepository;
+    use domain::{Email, PasswordHash, User, UserId, Username};
     use tower::ServiceExt;
 
     #[test]

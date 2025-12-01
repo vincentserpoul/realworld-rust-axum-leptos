@@ -5,7 +5,8 @@ use axum::{
 };
 use chrono::Utc;
 use domain::{
-    Email, ImageUrl, PlainPassword, UpdateUserInput, UserEnvelope, Username,
+    PlainPassword, UserEnvelope,
+    use_cases::{update_user, UpdateUserInput},
 };
 use serde::Deserialize;
 
@@ -23,10 +24,10 @@ where
     A: domain::repositories::ArticlesRepository + Clone + 'static,
     C: domain::repositories::CommentsRepository + Clone + 'static,
 {
-    Router::<AppState<U, A, C>>::new().route("/user", get(get_current_user).put(update_current_user))
+    Router::<AppState<U, A, C>>::new().route("/user", get(get_current_user_handler).put(update_current_user_handler))
 }
 
-async fn get_current_user(
+async fn get_current_user_handler(
     CurrentUser { user, token }: CurrentUser,
 ) -> ApiResult<Json<UserEnvelope>> {
     let view = user.to_view(Some(token));
@@ -47,7 +48,7 @@ struct UpdateUserPayload {
     image: Option<String>,
 }
 
-async fn update_current_user<U, A, C>(
+async fn update_current_user_handler<U, A, C>(
     State(state): State<AppState<U, A, C>>,
     CurrentUser { user, token }: CurrentUser,
     Json(req): Json<UpdateUserRequest>,
@@ -57,57 +58,38 @@ where
     A: domain::repositories::ArticlesRepository + Clone,
     C: domain::repositories::CommentsRepository + Clone,
 {
-    let UpdateUserPayload {
-        email,
-        username,
-        password,
-        bio,
-        image,
-    } = req.user;
-
-    let current_id = user.id;
-
-    let parsed_email = if let Some(email) = email {
-        let email = Email::parse(email)?;
-        if let Some(existing_user) = state.use_cases.users_repo.get_user_by_email(email.as_str()).await?
-            && existing_user.id != current_id
-        {
-            return Err(ApiError::conflict("email already registered"));
-        }
-        Some(email)
+    // Hash password if provided
+    let password_hash = if let Some(password) = req.user.password {
+        let password = PlainPassword::new(password)?;
+        Some(hash_password(&password)?)
     } else {
         None
     };
 
-    let mut existing = user;
+    let input = UpdateUserInput {
+        email: req.user.email,
+        username: req.user.username,
+        bio: req.user.bio.map(Some),
+        image: req.user.image.map(Some),
+        password_hash,
+    };
 
-    let mut changes = UpdateUserInput::default();
+    let view = update_user(&state.use_cases.users_repo, user.id, input, Utc::now())
+        .await
+        .map_err(|e| match e {
+            domain::DomainError::Conflict { entity: "email" } => {
+                ApiError::conflict("email already registered")
+            }
+            domain::DomainError::Conflict { entity: "username" } => {
+                ApiError::conflict("username already taken")
+            }
+            _ => ApiError::from(e),
+        })?;
 
-    if let Some(email) = parsed_email {
-        changes.email = Some(email);
-    }
+    // Attach the original token to the view
+    let mut view = view;
+    view.token = Some(token);
 
-    if let Some(username) = username {
-        changes.username = Some(Username::new(username)?);
-    }
-
-    if let Some(bio) = bio {
-        changes.bio = Some(Some(bio));
-    }
-
-    if let Some(image) = image {
-        changes.image = Some(Some(ImageUrl::new(image)?));
-    }
-
-    if let Some(password) = password {
-        let password = PlainPassword::new(password)?;
-        let password_hash = hash_password(&password)?;
-        changes.password_hash = Some(password_hash);
-    }
-
-    existing.apply_update(changes, Utc::now());
-    let updated = state.use_cases.users_repo.update_user(existing).await?;
-    let view = updated.to_view(Some(token));
     Ok(Json(UserEnvelope::from(view)))
 }
 
