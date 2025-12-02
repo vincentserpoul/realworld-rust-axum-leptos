@@ -11,7 +11,7 @@ use thiserror::Error;
 pub type Result<T> = std::result::Result<T, ConfigLoadError>;
 
 pub const ENV_CONFIG_PATH: &str = "APP_CONFIG_PATH";
-pub const DEFAULT_CONFIG_FILE: &str = "config/base";
+pub const DEFAULT_CONFIG_FILE: &str = "config/api/base";
 
 #[derive(Debug, Error)]
 pub enum ConfigLoadError {
@@ -25,11 +25,11 @@ pub enum ConfigLoadError {
 pub struct AppConfig {
     pub server: ServerConfig,
     pub database: DatabaseConfig,
-    pub opa: OpaConfig,
-    pub iggy: IggyConfig,
-    pub restate: RestateConfig,
+    // pub opa: OpaConfig,
+    // pub iggy: IggyConfig,
+    // pub restate: RestateConfig,
     pub telemetry: TelemetryConfig,
-    pub security: SecurityConfig,
+    // pub security: SecurityConfig,
 }
 
 impl AppConfig {
@@ -40,7 +40,7 @@ impl AppConfig {
             builder = builder.add_source(File::from(PathBuf::from(path)));
         }
 
-        builder = builder.add_source(File::with_name(DEFAULT_CONFIG_FILE).required(false));
+        builder = builder.add_source(File::with_name(DEFAULT_CONFIG_FILE).required(true));
         builder = builder.add_source(Environment::with_prefix("APP").separator("__"));
 
         Ok(builder.build()?.try_deserialize()?)

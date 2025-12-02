@@ -31,15 +31,15 @@ where
         .route("/", get(list_articles_handler).post(create_article_handler))
         .route("/feed", get(feed_articles_handler))
         .route(
-            "/:slug",
+            "/{slug}",
             get(get_article_handler).put(update_article_handler).delete(delete_article_handler),
         )
         .route(
-            "/:slug/favorite",
+            "/{slug}/favorite",
             post(favorite_article_handler).delete(unfavorite_article_handler),
         )
-        .route("/:slug/comments", get(list_comments_handler).post(create_comment_handler))
-        .route("/:slug/comments/:id", delete(delete_comment_handler))
+        .route("/{slug}/comments", get(list_comments_handler).post(create_comment_handler))
+        .route("/{slug}/comments/{id}", delete(delete_comment_handler))
 }
 
 #[derive(Debug, Default, Deserialize)]
