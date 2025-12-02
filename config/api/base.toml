@@ -1,0 +1,7 @@
+[server]
+
+[database]
+url = "postgres://user:password@localhost:5432/realworld"
+
+[telemetry]
+otel_endpoint = "http://localhost:4317"
