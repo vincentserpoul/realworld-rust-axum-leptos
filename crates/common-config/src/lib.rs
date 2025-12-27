@@ -2,8 +2,8 @@ use std::env;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::time::Duration;
-
-use config::{Config, ConfigError, Environment, File};
+use telemetry::config::TelemetryConfig;
+use config::{Config, ConfigError, File};
 use serde::Deserialize;
 use serde_with::{DurationSeconds, serde_as};
 use thiserror::Error;
@@ -11,7 +11,8 @@ use thiserror::Error;
 pub type Result<T> = std::result::Result<T, ConfigLoadError>;
 
 pub const ENV_CONFIG_PATH: &str = "APP_CONFIG_PATH";
-pub const DEFAULT_CONFIG_FILE: &str = "config/api/base";
+pub const DEFAULT_CONFIG_FILE: &str = "config/api/";
+pub const BASE_CONFIG_FILE: &str = "base";
 
 #[derive(Debug, Error)]
 pub enum ConfigLoadError {
@@ -36,13 +37,18 @@ impl AppConfig {
     pub fn load() -> Result<Self> {
         let mut builder = Config::builder();
 
-        if let Ok(path) = env::var(ENV_CONFIG_PATH) {
-            builder = builder.add_source(File::from(PathBuf::from(path)));
-        }
+        builder = builder.add_source(File::with_name(&format!("{DEFAULT_CONFIG_FILE}{BASE_CONFIG_FILE}")).required(true));
 
-        builder = builder.add_source(File::with_name(DEFAULT_CONFIG_FILE).required(true));
-        builder = builder.add_source(Environment::with_prefix("APP").separator("__"));
-
+        let env = {
+            if let Ok(env) = env::var("APP_ENV") {
+                env
+            } else {
+                "local".to_string()
+            }
+        };
+        
+        builder = builder.add_source(File::with_name(&format!("{DEFAULT_CONFIG_FILE}{env}")).required(true));
+        
         Ok(builder.build()?.try_deserialize()?)
     }
 }
@@ -167,20 +173,6 @@ impl RestateConfig {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct TelemetryConfig {
-    #[serde(default = "TelemetryConfig::default_service_name")]
-    pub service_name: String,
-    pub otlp_endpoint: Option<String>,
-    #[serde(default)]
-    pub log_json: bool,
-}
-
-impl TelemetryConfig {
-    fn default_service_name() -> String {
-        "realworld-rust-axum-leptos".into()
-    }
-}
 
 #[serde_as]
 #[derive(Debug, Clone, Deserialize)]

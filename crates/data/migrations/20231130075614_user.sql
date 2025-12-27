@@ -1,3 +1,5 @@
+-- migrate:up
+
 CREATE TABLE appuser(
     id uuid PRIMARY KEY,
     email varchar NOT NULL UNIQUE,
@@ -17,3 +19,9 @@ CREATE TABLE appuser_follows(
     FOREIGN KEY (follower_id) REFERENCES appuser(id) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (followee_id) REFERENCES appuser(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+-- migrate:down
+
+DROP TABLE IF EXISTS appuser_follows;
+
+DROP TABLE IF EXISTS appuser;

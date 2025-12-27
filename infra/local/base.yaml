@@ -11,7 +11,7 @@ volumes:
 
 services:
   openobserve:
-    image: public.ecr.aws/zinclabs/openobserve:v0.15.3
+    image: public.ecr.aws/zinclabs/openobserve:v0.30.2
     restart: always
     ports:
       - "5080:5080"
@@ -25,38 +25,6 @@ services:
     networks:
       - realworld
 
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.139.0
-    restart: always
-    volumes:
-      - ./otel-collector-config.yaml:/etc/otelcol-contrib/custom-config.yaml
-    command: ["--config=/etc/otelcol-contrib/custom-config.yaml"]
-    ports:
-      - 1888:1888 # pprof extension
-      - 8818:8818 # health_check extension
-      - 8888:8888 # Prometheus metrics exposed by the Collector
-      - 8889:8889 # Prometheus exporter metrics
-      - 13133:13133 # health_check extension
-      - 4317:4317 # OTLP gRPC receiver
-      - 55679:55679 # zpages extension
-    depends_on:
-      - openobserve
-    networks:
-      - realworld
-
-  # unfortunately necessary to manage CORS for the HTTP otel collector
-  otel-proxy:
-    image: caddy:2.10.2
-    restart: always
-    ports:
-      - 4318:80 # Proxy OTLP HTTP traffic
-    depends_on:
-      - otel-collector
-    volumes:
-      - ./otel-proxy:/etc/caddy/Caddyfile
-    networks:
-      - realworld
-
   mailcrab:
     image: marlonb/mailcrab:v1.6.2
     restart: always
@@ -67,7 +35,7 @@ services:
       - realworld
 
   valkey:
-    image: valkey/valkey:8.1
+    image: valkey/valkey:9
     ports:
       - "6379:6379"
     volumes:
@@ -76,7 +44,7 @@ services:
       - realworld
 
   postgres:
-    image: postgres:17
+    image: postgres:18
     restart: always
     environment:
       POSTGRES_DB: realworld
@@ -85,12 +53,28 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/18/docker
+    networks:
+      - realworld
+
+  # One-shot migration runner (SQL-first).
+  # Usage:
+  #   docker compose -f infra/local/base.yaml run --rm dbmate up
+  dbmate:
+    image: amacneil/dbmate:2
+    depends_on:
+      - postgres
+    environment:
+      # Connect to the compose postgres service over the internal network.
+      DATABASE_URL: postgres://realworld:realworld@postgres:5432/realworld?sslmode=disable
+    volumes:
+      - ../../crates/data/dbmate_migrations:/db/migrations:ro
+    entrypoint: ["dbmate", "--migrations-dir", "/db/migrations"]
     networks:
       - realworld
 
   iggy:
-    image: apache/iggy:latest
+    image: apache/iggy:0.6.0
     restart: always
     cap_add:
       - SYS_NICE
@@ -117,17 +101,8 @@ services:
       - realworld
 
   restate:
-    image: docker.io/restatedev/restate:0.9.0
+    image: docker.io/restatedev/restate:1.5.6
     restart: always
-    command:
-      [
-        "restate-server",
-        "dev-server",
-        "--data-dir=/var/lib/restate",
-        "--http-port=9070",
-        "--ingress-port=8081",
-        "--admin-port=9071",
-      ]
     ports:
       - "9070:9070" # HTTP control plane/UI
       - "8081:8081" # ingress endpoint used by the workflow client

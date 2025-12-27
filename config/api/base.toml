@@ -1,7 +1,5 @@
 [server]
 
-[database]
-url = "postgres://user:password@localhost:5432/realworld"
-
 [telemetry]
-otel_endpoint = "http://localhost:4317"
+service_name = "realworld-api"
+otlp_endpoint = "http://localhost:4317"

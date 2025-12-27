@@ -5,10 +5,12 @@ edition = "2024"
 
 [dependencies]
 anyhow = { workspace = true }
-common-config = { path = "../common-config" }
+base64 = { workspace = true }
 opentelemetry = { workspace = true }
 opentelemetry-otlp = { workspace = true }
-opentelemetry_sdk = { workspace = true }
+opentelemetry_sdk = { workspace = true, features = ["testing"] }
+tonic = { workspace = true }
 tracing = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 tracing-subscriber = { workspace = true }
+serde = { workspace = true }

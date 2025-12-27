@@ -9,7 +9,8 @@ use tracing::{error, info};
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let config = AppConfig::load().context("failed to load configuration")?;
-    telemetry::init(&config.telemetry).context("failed to initialize telemetry")?;
+    let telemetry = telemetry::init_with_meter(&config.telemetry)
+        .context("failed to initialize telemetry")?;
 
     let host = config.server.host.clone();
     let port = config.server.port;
@@ -39,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
     // Create app state with use cases
     let state = AppState::new(use_cases);
 
-    let app = router(state.clone());
+    let app = router(state.clone(), telemetry.meter.clone());
 
     let listener = TcpListener::bind((host.as_str(), port))
         .await

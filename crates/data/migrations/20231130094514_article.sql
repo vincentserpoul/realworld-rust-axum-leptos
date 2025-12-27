@@ -1,3 +1,5 @@
+-- migrate:up
+
 CREATE TABLE article(
     id uuid PRIMARY KEY,
     slug text NOT NULL UNIQUE,
@@ -53,3 +55,15 @@ CREATE TABLE article_favorite(
     FOREIGN KEY (appuser_id) REFERENCES appuser(id) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (article_id) REFERENCES article(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+-- migrate:down
+
+DROP TABLE IF EXISTS article_favorite;
+
+DROP TABLE IF EXISTS article_tag;
+
+DROP TABLE IF EXISTS comment;
+
+DROP TABLE IF EXISTS tag;
+
+DROP TABLE IF EXISTS article;
