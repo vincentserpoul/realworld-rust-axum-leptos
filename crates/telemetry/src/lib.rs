@@ -15,6 +15,7 @@ use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::fmt::time::UtcTime;
 use tracing_subscriber::layer::{Layer, SubscriberExt};
 use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::EnvFilter;
 
 pub mod config;
 
@@ -53,7 +54,13 @@ pub fn init(config: &config::TelemetryConfig) -> anyhow::Result<TelemetryGuard> 
         fmt_layer.boxed()
     };
 
+    // Default to INFO to avoid noisy DEBUG logs from dependencies (e.g. opentelemetry_sdk)
+    // while still allowing overrides via RUST_LOG.
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info,opentelemetry_sdk=info"));
+
     let registry = tracing_subscriber::registry()
+        .with(env_filter)
         .with(fmt_layer);
 
     let endpoint = config
