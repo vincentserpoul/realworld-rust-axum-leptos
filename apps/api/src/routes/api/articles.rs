@@ -1,6 +1,7 @@
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
+    http::StatusCode,
     routing::{delete, get, post},
 };
 use chrono::Utc;
@@ -140,7 +141,7 @@ async fn create_article_handler<U, A, C>(
     State(state): State<AppState<U, A, C>>,
     CurrentUser { user, .. }: CurrentUser,
     Json(req): Json<CreateArticleRequest>,
-) -> ApiResult<Json<ArticleEnvelope>>
+) -> ApiResult<(StatusCode, Json<ArticleEnvelope>)>
 where
     U: domain::repositories::UsersRepository + Clone,
     A: domain::repositories::ArticlesRepository + Clone,
@@ -163,7 +164,7 @@ where
     )
     .await?;
 
-    Ok(Json(ArticleEnvelope::from(view)))
+    Ok((StatusCode::CREATED, Json(ArticleEnvelope::from(view))))
 }
 
 async fn get_article_handler<U, A, C>(
@@ -319,7 +320,7 @@ async fn create_comment_handler<U, A, C>(
     CurrentUser { user, .. }: CurrentUser,
     Path(slug): Path<String>,
     Json(req): Json<CreateCommentRequest>,
-) -> ApiResult<Json<CommentEnvelope>>
+) -> ApiResult<(StatusCode, Json<CommentEnvelope>)>
 where
     U: domain::repositories::UsersRepository + Clone,
     A: domain::repositories::ArticlesRepository + Clone,
@@ -341,7 +342,7 @@ where
     .await
     .map_err(|_| ApiError::not_found("article"))?;
 
-    Ok(Json(CommentEnvelope::from(view)))
+    Ok((StatusCode::CREATED, Json(CommentEnvelope::from(view))))
 }
 
 async fn delete_comment_handler<U, A, C>(

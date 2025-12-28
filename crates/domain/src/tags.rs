@@ -1,8 +1,9 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::errors::{DomainError, DomainResult};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Tag(String);
 
 impl Tag {
@@ -25,9 +26,34 @@ impl From<Tag> for String {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+/// A list of tags that serializes as a flat array of strings.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TagList {
     tags: Vec<Tag>,
+}
+
+impl Serialize for TagList {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // Serialize as a flat array of strings
+        serializer.collect_seq(self.tags.iter().map(|t| t.as_str()))
+    }
+}
+
+impl<'de> Deserialize<'de> for TagList {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let strings: Vec<String> = Vec::deserialize(deserializer)?;
+        let tags = strings
+            .into_iter()
+            .filter_map(|s| Tag::new(s).ok())
+            .collect();
+        Ok(Self { tags })
+    }
 }
 
 impl TagList {

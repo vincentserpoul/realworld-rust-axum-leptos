@@ -69,13 +69,14 @@ impl IntoResponse for AppError {
                 DomainError::Conflict { .. } => (StatusCode::CONFLICT, "Conflict"),
                 DomainError::NotFound { .. } => (StatusCode::NOT_FOUND, "Not Found"),
                 DomainError::UnauthorizedAction => (StatusCode::UNAUTHORIZED, "Unauthorized"),
+                DomainError::Database { .. } => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),
                 _ => (StatusCode::UNPROCESSABLE_ENTITY, "Validation Error"),
             }
         } else if error_msg.contains("already registered") || error_msg.contains("already exists") {
             (StatusCode::CONFLICT, "Conflict")
         } else if error_msg.contains("not found") {
             (StatusCode::NOT_FOUND, "Not Found")
-        } else if error_msg.contains("invalid credentials") || error_msg.contains("unauthorized") {
+        } else if error_msg.contains("invalid credentials") || error_msg.contains("unauthorized") || error_msg.contains("invalid token") || error_msg.contains("missing authorization") {
             (StatusCode::UNAUTHORIZED, "Unauthorized")
         } else if error_msg.contains("cannot follow") || error_msg.contains("validation") {
             (StatusCode::UNPROCESSABLE_ENTITY, "Validation Error")

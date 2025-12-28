@@ -2,10 +2,10 @@
 
 #[derive(Debug)]
 pub struct CreateArticleParams<
-    T1: crate::clorinde::StringSql,
-    T2: crate::clorinde::StringSql,
-    T3: crate::clorinde::StringSql,
-    T4: crate::clorinde::StringSql,
+    T1: crate::StringSql,
+    T2: crate::StringSql,
+    T3: crate::StringSql,
+    T4: crate::StringSql,
 > {
     pub id: uuid::Uuid,
     pub slug: T1,
@@ -17,10 +17,10 @@ pub struct CreateArticleParams<
 }
 #[derive(Debug)]
 pub struct UpdateArticleParams<
-    T1: crate::clorinde::StringSql,
-    T2: crate::clorinde::StringSql,
-    T3: crate::clorinde::StringSql,
-    T4: crate::clorinde::StringSql,
+    T1: crate::StringSql,
+    T2: crate::StringSql,
+    T3: crate::StringSql,
+    T4: crate::StringSql,
 > {
     pub slug: T1,
     pub title: T2,
@@ -45,7 +45,7 @@ pub struct IsFavoritedParams {
     pub article_id: uuid::Uuid,
 }
 #[derive(Debug)]
-pub struct CreateTagParams<T1: crate::clorinde::StringSql> {
+pub struct CreateTagParams<T1: crate::StringSql> {
     pub id: uuid::Uuid,
     pub name: T1,
 }
@@ -55,7 +55,7 @@ pub struct AddTagToArticleParams {
     pub tag_id: uuid::Uuid,
 }
 #[derive(Debug)]
-pub struct ListArticlesParams<T1: crate::clorinde::StringSql, T2: crate::clorinde::StringSql, T3: crate::clorinde::StringSql> {
+pub struct ListArticlesParams<T1: crate::StringSql, T2: crate::StringSql, T3: crate::StringSql> {
     pub viewer_id: uuid::Uuid,
     pub author: T1,
     pub tag: T2,
@@ -64,7 +64,7 @@ pub struct ListArticlesParams<T1: crate::clorinde::StringSql, T2: crate::clorind
     pub offset: i64,
 }
 #[derive(Debug)]
-pub struct CountArticlesParams<T1: crate::clorinde::StringSql, T2: crate::clorinde::StringSql, T3: crate::clorinde::StringSql> {
+pub struct CountArticlesParams<T1: crate::StringSql, T2: crate::StringSql, T3: crate::StringSql> {
     pub author: T1,
     pub tag: T2,
     pub favorited: T3,
@@ -131,8 +131,6 @@ pub struct GetArticleBySlug {
     pub author_id: uuid::Uuid,
     pub created_at: chrono::DateTime<chrono::FixedOffset>,
     pub updated_at: chrono::DateTime<chrono::FixedOffset>,
-    pub favorites_count: i64,
-    pub tag_list: Vec<String>,
 }
 pub struct GetArticleBySlugBorrowed<'a> {
     pub id: uuid::Uuid,
@@ -143,8 +141,6 @@ pub struct GetArticleBySlugBorrowed<'a> {
     pub author_id: uuid::Uuid,
     pub created_at: chrono::DateTime<chrono::FixedOffset>,
     pub updated_at: chrono::DateTime<chrono::FixedOffset>,
-    pub favorites_count: i64,
-    pub tag_list: crate::clorinde::ArrayIterator<'a, &'a str>,
 }
 impl<'a> From<GetArticleBySlugBorrowed<'a>> for GetArticleBySlug {
     fn from(
@@ -157,8 +153,6 @@ impl<'a> From<GetArticleBySlugBorrowed<'a>> for GetArticleBySlug {
             author_id,
             created_at,
             updated_at,
-            favorites_count,
-            tag_list,
         }: GetArticleBySlugBorrowed<'a>,
     ) -> Self {
         Self {
@@ -170,8 +164,6 @@ impl<'a> From<GetArticleBySlugBorrowed<'a>> for GetArticleBySlug {
             author_id,
             created_at,
             updated_at,
-            favorites_count,
-            tag_list: tag_list.map(|v| v.into()).collect(),
         }
     }
 }
@@ -185,8 +177,6 @@ pub struct GetArticleById {
     pub author_id: uuid::Uuid,
     pub created_at: chrono::DateTime<chrono::FixedOffset>,
     pub updated_at: chrono::DateTime<chrono::FixedOffset>,
-    pub favorites_count: i64,
-    pub tag_list: Vec<String>,
 }
 pub struct GetArticleByIdBorrowed<'a> {
     pub id: uuid::Uuid,
@@ -197,8 +187,6 @@ pub struct GetArticleByIdBorrowed<'a> {
     pub author_id: uuid::Uuid,
     pub created_at: chrono::DateTime<chrono::FixedOffset>,
     pub updated_at: chrono::DateTime<chrono::FixedOffset>,
-    pub favorites_count: i64,
-    pub tag_list: crate::clorinde::ArrayIterator<'a, &'a str>,
 }
 impl<'a> From<GetArticleByIdBorrowed<'a>> for GetArticleById {
     fn from(
@@ -211,8 +199,6 @@ impl<'a> From<GetArticleByIdBorrowed<'a>> for GetArticleById {
             author_id,
             created_at,
             updated_at,
-            favorites_count,
-            tag_list,
         }: GetArticleByIdBorrowed<'a>,
     ) -> Self {
         Self {
@@ -224,8 +210,6 @@ impl<'a> From<GetArticleByIdBorrowed<'a>> for GetArticleById {
             author_id,
             created_at,
             updated_at,
-            favorites_count,
-            tag_list: tag_list.map(|v| v.into()).collect(),
         }
     }
 }
@@ -334,7 +318,7 @@ pub struct ListArticlesBorrowed<'a> {
     pub following_author: bool,
     pub favorited: bool,
     pub favorites_count: i64,
-    pub tag_list: crate::clorinde::ArrayIterator<'a, &'a str>,
+    pub tag_list: crate::ArrayIterator<'a, &'a str>,
 }
 impl<'a> From<ListArticlesBorrowed<'a>> for ListArticles {
     fn from(
@@ -408,7 +392,7 @@ pub struct FeedArticlesBorrowed<'a> {
     pub following_author: bool,
     pub favorited: bool,
     pub favorites_count: i64,
-    pub tag_list: crate::clorinde::ArrayIterator<'a, &'a str>,
+    pub tag_list: crate::ArrayIterator<'a, &'a str>,
 }
 impl<'a> From<FeedArticlesBorrowed<'a>> for FeedArticles {
     fn from(
@@ -449,7 +433,7 @@ impl<'a> From<FeedArticlesBorrowed<'a>> for FeedArticles {
         }
     }
 }
-use crate::clorinde::client::async_::GenericClient;
+use crate::client::async_::GenericClient;
 use futures::{self, StreamExt, TryStreamExt};
 pub struct CreateArticleQuery<'c, 'a, 's, C: GenericClient, T, const N: usize> {
     client: &'c C,
@@ -478,7 +462,7 @@ where
     }
     pub async fn one(self) -> Result<T, tokio_postgres::Error> {
         let row =
-            crate::clorinde::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
         Ok((self.mapper)((self.extractor)(&row)?))
     }
     pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
@@ -486,7 +470,7 @@ where
     }
     pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
         let opt_row =
-            crate::clorinde::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
         Ok(opt_row
             .map(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -500,10 +484,10 @@ where
         impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
         tokio_postgres::Error,
     > {
-        let stream = crate::clorinde::client::async_::raw(
+        let stream = crate::client::async_::raw(
             self.client,
             self.query,
-            crate::clorinde::slice_iter(&self.params),
+            crate::slice_iter(&self.params),
             self.cached,
         )
         .await?;
@@ -545,7 +529,7 @@ where
     }
     pub async fn one(self) -> Result<T, tokio_postgres::Error> {
         let row =
-            crate::clorinde::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
         Ok((self.mapper)((self.extractor)(&row)?))
     }
     pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
@@ -553,7 +537,7 @@ where
     }
     pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
         let opt_row =
-            crate::clorinde::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
         Ok(opt_row
             .map(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -567,10 +551,10 @@ where
         impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
         tokio_postgres::Error,
     > {
-        let stream = crate::clorinde::client::async_::raw(
+        let stream = crate::client::async_::raw(
             self.client,
             self.query,
-            crate::clorinde::slice_iter(&self.params),
+            crate::slice_iter(&self.params),
             self.cached,
         )
         .await?;
@@ -612,7 +596,7 @@ where
     }
     pub async fn one(self) -> Result<T, tokio_postgres::Error> {
         let row =
-            crate::clorinde::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
         Ok((self.mapper)((self.extractor)(&row)?))
     }
     pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
@@ -620,7 +604,7 @@ where
     }
     pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
         let opt_row =
-            crate::clorinde::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
         Ok(opt_row
             .map(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -634,10 +618,10 @@ where
         impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
         tokio_postgres::Error,
     > {
-        let stream = crate::clorinde::client::async_::raw(
+        let stream = crate::client::async_::raw(
             self.client,
             self.query,
-            crate::clorinde::slice_iter(&self.params),
+            crate::slice_iter(&self.params),
             self.cached,
         )
         .await?;
@@ -679,7 +663,7 @@ where
     }
     pub async fn one(self) -> Result<T, tokio_postgres::Error> {
         let row =
-            crate::clorinde::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
         Ok((self.mapper)((self.extractor)(&row)?))
     }
     pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
@@ -687,7 +671,7 @@ where
     }
     pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
         let opt_row =
-            crate::clorinde::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
         Ok(opt_row
             .map(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -701,10 +685,10 @@ where
         impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
         tokio_postgres::Error,
     > {
-        let stream = crate::clorinde::client::async_::raw(
+        let stream = crate::client::async_::raw(
             self.client,
             self.query,
-            crate::clorinde::slice_iter(&self.params),
+            crate::slice_iter(&self.params),
             self.cached,
         )
         .await?;
@@ -743,7 +727,7 @@ where
     }
     pub async fn one(self) -> Result<T, tokio_postgres::Error> {
         let row =
-            crate::clorinde::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
         Ok((self.mapper)((self.extractor)(&row)?))
     }
     pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
@@ -751,7 +735,7 @@ where
     }
     pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
         let opt_row =
-            crate::clorinde::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
         Ok(opt_row
             .map(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -765,10 +749,10 @@ where
         impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
         tokio_postgres::Error,
     > {
-        let stream = crate::clorinde::client::async_::raw(
+        let stream = crate::client::async_::raw(
             self.client,
             self.query,
-            crate::clorinde::slice_iter(&self.params),
+            crate::slice_iter(&self.params),
             self.cached,
         )
         .await?;
@@ -807,7 +791,7 @@ where
     }
     pub async fn one(self) -> Result<T, tokio_postgres::Error> {
         let row =
-            crate::clorinde::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
         Ok((self.mapper)((self.extractor)(&row)?))
     }
     pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
@@ -815,7 +799,7 @@ where
     }
     pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
         let opt_row =
-            crate::clorinde::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
         Ok(opt_row
             .map(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -829,10 +813,10 @@ where
         impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
         tokio_postgres::Error,
     > {
-        let stream = crate::clorinde::client::async_::raw(
+        let stream = crate::client::async_::raw(
             self.client,
             self.query,
-            crate::clorinde::slice_iter(&self.params),
+            crate::slice_iter(&self.params),
             self.cached,
         )
         .await?;
@@ -871,7 +855,7 @@ where
     }
     pub async fn one(self) -> Result<T, tokio_postgres::Error> {
         let row =
-            crate::clorinde::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
         Ok((self.mapper)((self.extractor)(&row)?))
     }
     pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
@@ -879,7 +863,7 @@ where
     }
     pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
         let opt_row =
-            crate::clorinde::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
         Ok(opt_row
             .map(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -893,10 +877,10 @@ where
         impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
         tokio_postgres::Error,
     > {
-        let stream = crate::clorinde::client::async_::raw(
+        let stream = crate::client::async_::raw(
             self.client,
             self.query,
-            crate::clorinde::slice_iter(&self.params),
+            crate::slice_iter(&self.params),
             self.cached,
         )
         .await?;
@@ -938,7 +922,7 @@ where
     }
     pub async fn one(self) -> Result<T, tokio_postgres::Error> {
         let row =
-            crate::clorinde::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
         Ok((self.mapper)((self.extractor)(&row)?))
     }
     pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
@@ -946,7 +930,7 @@ where
     }
     pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
         let opt_row =
-            crate::clorinde::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
         Ok(opt_row
             .map(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -960,10 +944,10 @@ where
         impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
         tokio_postgres::Error,
     > {
-        let stream = crate::clorinde::client::async_::raw(
+        let stream = crate::client::async_::raw(
             self.client,
             self.query,
-            crate::clorinde::slice_iter(&self.params),
+            crate::slice_iter(&self.params),
             self.cached,
         )
         .await?;
@@ -1005,7 +989,7 @@ where
     }
     pub async fn one(self) -> Result<T, tokio_postgres::Error> {
         let row =
-            crate::clorinde::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
         Ok((self.mapper)((self.extractor)(&row)?))
     }
     pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
@@ -1013,7 +997,7 @@ where
     }
     pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
         let opt_row =
-            crate::clorinde::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
         Ok(opt_row
             .map(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -1027,10 +1011,10 @@ where
         impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
         tokio_postgres::Error,
     > {
-        let stream = crate::clorinde::client::async_::raw(
+        let stream = crate::client::async_::raw(
             self.client,
             self.query,
-            crate::clorinde::slice_iter(&self.params),
+            crate::slice_iter(&self.params),
             self.cached,
         )
         .await?;
@@ -1072,7 +1056,7 @@ where
     }
     pub async fn one(self) -> Result<T, tokio_postgres::Error> {
         let row =
-            crate::clorinde::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::one(self.client, self.query, &self.params, self.cached).await?;
         Ok((self.mapper)((self.extractor)(&row)?))
     }
     pub async fn all(self) -> Result<Vec<T>, tokio_postgres::Error> {
@@ -1080,7 +1064,7 @@ where
     }
     pub async fn opt(self) -> Result<Option<T>, tokio_postgres::Error> {
         let opt_row =
-            crate::clorinde::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
+            crate::client::async_::opt(self.client, self.query, &self.params, self.cached).await?;
         Ok(opt_row
             .map(|row| {
                 let extracted = (self.extractor)(&row)?;
@@ -1094,10 +1078,10 @@ where
         impl futures::Stream<Item = Result<T, tokio_postgres::Error>> + 'c,
         tokio_postgres::Error,
     > {
-        let stream = crate::clorinde::client::async_::raw(
+        let stream = crate::client::async_::raw(
             self.client,
             self.query,
-            crate::clorinde::slice_iter(&self.params),
+            crate::slice_iter(&self.params),
             self.cached,
         )
         .await?;
@@ -1132,10 +1116,10 @@ impl CreateArticleStmt {
         'a,
         's,
         C: GenericClient,
-        T1: crate::clorinde::StringSql,
-        T2: crate::clorinde::StringSql,
-        T3: crate::clorinde::StringSql,
-        T4: crate::clorinde::StringSql,
+        T1: crate::StringSql,
+        T2: crate::StringSql,
+        T3: crate::StringSql,
+        T4: crate::StringSql,
     >(
         &'s self,
         client: &'c C,
@@ -1174,12 +1158,12 @@ impl<
     'a,
     's,
     C: GenericClient,
-    T1: crate::clorinde::StringSql,
-    T2: crate::clorinde::StringSql,
-    T3: crate::clorinde::StringSql,
-    T4: crate::clorinde::StringSql,
+    T1: crate::StringSql,
+    T2: crate::StringSql,
+    T3: crate::StringSql,
+    T4: crate::StringSql,
 >
-    crate::clorinde::client::async_::Params<
+    crate::client::async_::Params<
         'c,
         'a,
         's,
@@ -1207,10 +1191,7 @@ impl<
 }
 pub struct GetArticleBySlugStmt(&'static str, Option<tokio_postgres::Statement>);
 pub fn get_article_by_slug() -> GetArticleBySlugStmt {
-    GetArticleBySlugStmt(
-        "SELECT a.*, (SELECT COUNT(*) FROM article_favorite WHERE article_id = a.id) as favorites_count, ARRAY(SELECT t.name FROM tag t JOIN article_tag at ON t.id = at.tag_id WHERE at.article_id = a.id ORDER BY t.name) as tag_list FROM article a WHERE a.slug = $1",
-        None,
-    )
+    GetArticleBySlugStmt("SELECT * FROM article WHERE slug = $1", None)
 }
 impl GetArticleBySlugStmt {
     pub async fn prepare<'a, C: GenericClient>(
@@ -1220,7 +1201,7 @@ impl GetArticleBySlugStmt {
         self.1 = Some(client.prepare(self.0).await?);
         Ok(self)
     }
-    pub fn bind<'c, 'a, 's, C: GenericClient, T1: crate::clorinde::StringSql>(
+    pub fn bind<'c, 'a, 's, C: GenericClient, T1: crate::StringSql>(
         &'s self,
         client: &'c C,
         slug: &'a T1,
@@ -1242,8 +1223,6 @@ impl GetArticleBySlugStmt {
                     author_id: row.try_get(5)?,
                     created_at: row.try_get(6)?,
                     updated_at: row.try_get(7)?,
-                    favorites_count: row.try_get(8)?,
-                    tag_list: row.try_get(9)?,
                 })
             },
             mapper: |it| GetArticleBySlug::from(it),
@@ -1252,10 +1231,7 @@ impl GetArticleBySlugStmt {
 }
 pub struct GetArticleByIdStmt(&'static str, Option<tokio_postgres::Statement>);
 pub fn get_article_by_id() -> GetArticleByIdStmt {
-    GetArticleByIdStmt(
-        "SELECT a.*, (SELECT COUNT(*) FROM article_favorite WHERE article_id = a.id) as favorites_count, ARRAY(SELECT t.name FROM tag t JOIN article_tag at ON t.id = at.tag_id WHERE at.article_id = a.id ORDER BY t.name) as tag_list FROM article a WHERE a.id = $1",
-        None,
-    )
+    GetArticleByIdStmt("SELECT * FROM article WHERE id = $1", None)
 }
 impl GetArticleByIdStmt {
     pub async fn prepare<'a, C: GenericClient>(
@@ -1287,8 +1263,6 @@ impl GetArticleByIdStmt {
                     author_id: row.try_get(5)?,
                     created_at: row.try_get(6)?,
                     updated_at: row.try_get(7)?,
-                    favorites_count: row.try_get(8)?,
-                    tag_list: row.try_get(9)?,
                 })
             },
             mapper: |it| GetArticleById::from(it),
@@ -1315,10 +1289,10 @@ impl UpdateArticleStmt {
         'a,
         's,
         C: GenericClient,
-        T1: crate::clorinde::StringSql,
-        T2: crate::clorinde::StringSql,
-        T3: crate::clorinde::StringSql,
-        T4: crate::clorinde::StringSql,
+        T1: crate::StringSql,
+        T2: crate::StringSql,
+        T3: crate::StringSql,
+        T4: crate::StringSql,
     >(
         &'s self,
         client: &'c C,
@@ -1356,12 +1330,12 @@ impl<
     'a,
     's,
     C: GenericClient,
-    T1: crate::clorinde::StringSql,
-    T2: crate::clorinde::StringSql,
-    T3: crate::clorinde::StringSql,
-    T4: crate::clorinde::StringSql,
+    T1: crate::StringSql,
+    T2: crate::StringSql,
+    T3: crate::StringSql,
+    T4: crate::StringSql,
 >
-    crate::clorinde::client::async_::Params<
+    crate::client::async_::Params<
         'c,
         'a,
         's,
@@ -1431,7 +1405,7 @@ impl FavoriteArticleStmt {
     }
 }
 impl<'a, C: GenericClient + Send + Sync>
-    crate::clorinde::client::async_::Params<
+    crate::client::async_::Params<
         'a,
         'a,
         'a,
@@ -1477,7 +1451,7 @@ impl UnfavoriteArticleStmt {
     }
 }
 impl<'a, C: GenericClient + Send + Sync>
-    crate::clorinde::client::async_::Params<
+    crate::client::async_::Params<
         'a,
         'a,
         'a,
@@ -1530,7 +1504,7 @@ impl IsFavoritedStmt {
     }
 }
 impl<'c, 'a, 's, C: GenericClient>
-    crate::clorinde::client::async_::Params<
+    crate::client::async_::Params<
         'c,
         'a,
         's,
@@ -1618,7 +1592,7 @@ impl CreateTagStmt {
         self.1 = Some(client.prepare(self.0).await?);
         Ok(self)
     }
-    pub async fn bind<'c, 'a, 's, C: GenericClient, T1: crate::clorinde::StringSql>(
+    pub async fn bind<'c, 'a, 's, C: GenericClient, T1: crate::StringSql>(
         &'s self,
         client: &'c C,
         id: &'a uuid::Uuid,
@@ -1627,8 +1601,8 @@ impl CreateTagStmt {
         client.execute(self.0, &[id, name]).await
     }
 }
-impl<'a, C: GenericClient + Send + Sync, T1: crate::clorinde::StringSql>
-    crate::clorinde::client::async_::Params<
+impl<'a, C: GenericClient + Send + Sync, T1: crate::StringSql>
+    crate::client::async_::Params<
         'a,
         'a,
         'a,
@@ -1661,7 +1635,7 @@ impl GetTagByNameStmt {
         self.1 = Some(client.prepare(self.0).await?);
         Ok(self)
     }
-    pub fn bind<'c, 'a, 's, C: GenericClient, T1: crate::clorinde::StringSql>(
+    pub fn bind<'c, 'a, 's, C: GenericClient, T1: crate::StringSql>(
         &'s self,
         client: &'c C,
         name: &'a T1,
@@ -1708,7 +1682,7 @@ impl AddTagToArticleStmt {
     }
 }
 impl<'a, C: GenericClient + Send + Sync>
-    crate::clorinde::client::async_::Params<
+    crate::client::async_::Params<
         'a,
         'a,
         'a,
@@ -1799,9 +1773,9 @@ impl ListArticlesStmt {
         'a,
         's,
         C: GenericClient,
-        T1: crate::clorinde::StringSql,
-        T2: crate::clorinde::StringSql,
-        T3: crate::clorinde::StringSql,
+        T1: crate::StringSql,
+        T2: crate::StringSql,
+        T3: crate::StringSql,
     >(
         &'s self,
         client: &'c C,
@@ -1841,8 +1815,8 @@ impl ListArticlesStmt {
         }
     }
 }
-impl<'c, 'a, 's, C: GenericClient, T1: crate::clorinde::StringSql, T2: crate::clorinde::StringSql, T3: crate::clorinde::StringSql>
-    crate::clorinde::client::async_::Params<
+impl<'c, 'a, 's, C: GenericClient, T1: crate::StringSql, T2: crate::StringSql, T3: crate::StringSql>
+    crate::client::async_::Params<
         'c,
         'a,
         's,
@@ -1887,9 +1861,9 @@ impl CountArticlesStmt {
         'a,
         's,
         C: GenericClient,
-        T1: crate::clorinde::StringSql,
-        T2: crate::clorinde::StringSql,
-        T3: crate::clorinde::StringSql,
+        T1: crate::StringSql,
+        T2: crate::StringSql,
+        T3: crate::StringSql,
     >(
         &'s self,
         client: &'c C,
@@ -1907,8 +1881,8 @@ impl CountArticlesStmt {
         }
     }
 }
-impl<'c, 'a, 's, C: GenericClient, T1: crate::clorinde::StringSql, T2: crate::clorinde::StringSql, T3: crate::clorinde::StringSql>
-    crate::clorinde::client::async_::Params<
+impl<'c, 'a, 's, C: GenericClient, T1: crate::StringSql, T2: crate::StringSql, T3: crate::StringSql>
+    crate::client::async_::Params<
         'c,
         'a,
         's,
@@ -1977,7 +1951,7 @@ impl FeedArticlesStmt {
     }
 }
 impl<'c, 'a, 's, C: GenericClient>
-    crate::clorinde::client::async_::Params<
+    crate::client::async_::Params<
         'c,
         'a,
         's,

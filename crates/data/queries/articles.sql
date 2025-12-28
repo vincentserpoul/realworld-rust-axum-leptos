@@ -4,10 +4,16 @@ VALUES (:id, :slug, :title, :description, :body, :author_id, :created_at, :creat
 RETURNING *;
 
 --! get_article_by_slug
-SELECT * FROM article WHERE slug = :slug;
+SELECT a.*,
+       (SELECT COUNT(*) FROM article_favorite WHERE article_id = a.id) as favorites_count,
+       ARRAY(SELECT t.name FROM tag t JOIN article_tag at ON t.id = at.tag_id WHERE at.article_id = a.id ORDER BY t.name) as tag_list
+FROM article a WHERE a.slug = :slug;
 
 --! get_article_by_id
-SELECT * FROM article WHERE id = :id;
+SELECT a.*,
+       (SELECT COUNT(*) FROM article_favorite WHERE article_id = a.id) as favorites_count,
+       ARRAY(SELECT t.name FROM tag t JOIN article_tag at ON t.id = at.tag_id WHERE at.article_id = a.id ORDER BY t.name) as tag_list
+FROM article a WHERE a.id = :id;
 
 --! update_article
 UPDATE article
@@ -36,6 +42,9 @@ SELECT EXISTS(
     SELECT 1 FROM article_favorite
     WHERE appuser_id = :user_id AND article_id = :article_id
 );
+
+--! get_favorites_count
+SELECT COUNT(*) as count FROM article_favorite WHERE article_id = :article_id;
 
 --! get_tags
 SELECT name FROM tag;
@@ -66,7 +75,7 @@ SELECT a.id, a.slug, a.title, a.description, a.body, a.author_id, a.created_at, 
        EXISTS(SELECT 1 FROM appuser_follows WHERE follower_id = :viewer_id AND followee_id = a.author_id) as following_author,
        EXISTS(SELECT 1 FROM article_favorite WHERE appuser_id = :viewer_id AND article_id = a.id) as favorited,
        (SELECT COUNT(*) FROM article_favorite WHERE article_id = a.id) as favorites_count,
-       ARRAY(SELECT t.name FROM tag t JOIN article_tag at ON t.id = at.tag_id WHERE at.article_id = a.id) as tag_list
+       ARRAY(SELECT t.name FROM tag t JOIN article_tag at ON t.id = at.tag_id WHERE at.article_id = a.id ORDER BY t.name) as tag_list
 FROM article a
 JOIN appuser u ON a.author_id = u.id
 WHERE (:author::text IS NULL OR a.author_id = (SELECT id FROM appuser WHERE username = :author))
@@ -90,7 +99,7 @@ SELECT a.id, a.slug, a.title, a.description, a.body, a.author_id, a.created_at, 
        true as following_author,
        EXISTS(SELECT 1 FROM article_favorite WHERE appuser_id = :viewer_id AND article_id = a.id) as favorited,
        (SELECT COUNT(*) FROM article_favorite WHERE article_id = a.id) as favorites_count,
-       ARRAY(SELECT t.name FROM tag t JOIN article_tag at ON t.id = at.tag_id WHERE at.article_id = a.id) as tag_list
+       ARRAY(SELECT t.name FROM tag t JOIN article_tag at ON t.id = at.tag_id WHERE at.article_id = a.id ORDER BY t.name) as tag_list
 FROM article a
 JOIN appuser u ON a.author_id = u.id
 JOIN appuser_follows af ON af.followee_id = a.author_id

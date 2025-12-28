@@ -191,20 +191,15 @@ impl ArticlesRepository for PostgresArticlesRepository {
             .await?;
         
         if let Some(row) = article_row {
-            let tags = crate::clorinde::queries::articles::get_article_tags()
-                .bind(&client, &row.id)
-                .all()
-                .await?;
-            
             Ok(Some(Article {
                 id: ArticleId::from(row.id),
                 slug: domain::Slug::new(row.slug).expect("invalid slug in db"),
                 title: row.title,
                 description: row.description,
                 body: row.body,
-                tag_list: domain::TagList::new(tags).expect("invalid tags in db"),
+                tag_list: domain::TagList::new(row.tag_list).expect("invalid tags in db"),
                 author_id: UserId::from(row.author_id),
-                favorites_count: 0, // TODO: Fetch count
+                favorites_count: row.favorites_count as u32,
                 created_at: row.created_at.with_timezone(&chrono::Utc),
                 updated_at: row.updated_at.with_timezone(&chrono::Utc),
             }))
@@ -221,20 +216,15 @@ impl ArticlesRepository for PostgresArticlesRepository {
             .await?;
         
         if let Some(row) = article_row {
-            let tags = crate::clorinde::queries::articles::get_article_tags()
-                .bind(&client, &row.id)
-                .all()
-                .await?;
-            
             Ok(Some(Article {
                 id: ArticleId::from(row.id),
                 slug: domain::Slug::new(row.slug).expect("invalid slug in db"),
                 title: row.title,
                 description: row.description,
                 body: row.body,
-                tag_list: domain::TagList::new(tags).expect("invalid tags in db"),
+                tag_list: domain::TagList::new(row.tag_list).expect("invalid tags in db"),
                 author_id: UserId::from(row.author_id),
-                favorites_count: 0, // TODO: Fetch count
+                favorites_count: row.favorites_count as u32,
                 created_at: row.created_at.with_timezone(&chrono::Utc),
                 updated_at: row.updated_at.with_timezone(&chrono::Utc),
             }))

@@ -32,4 +32,6 @@ pub enum DomainError {
     Conflict { entity: &'static str },
     #[error("operation is not allowed for the current user")]
     UnauthorizedAction,
+    #[error("database error: {message}")]
+    Database { message: String },
 }

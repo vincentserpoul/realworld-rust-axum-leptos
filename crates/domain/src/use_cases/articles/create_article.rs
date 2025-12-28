@@ -41,8 +41,16 @@ where
     let created = articles_repo
         .create_article(article)
         .await
-        .map_err(|e| crate::DomainError::NotFound {
-            entity: Box::leak(e.to_string().into_boxed_str()),
+        .map_err(|e| {
+            // Format the full error chain
+            let mut msg = e.to_string();
+            let mut source = e.source();
+            while let Some(s) = source {
+                msg.push_str(": ");
+                msg.push_str(&s.to_string());
+                source = s.source();
+            }
+            crate::DomainError::Database { message: msg }
         })?;
 
     Ok(created.to_view(author_profile, false))

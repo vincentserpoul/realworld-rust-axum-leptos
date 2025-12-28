@@ -237,6 +237,7 @@ pub struct ArticleView {
     pub title: String,
     pub description: String,
     pub body: String,
+    #[serde(rename = "tagList")]
     pub tag_list: TagList,
     #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
@@ -253,6 +254,7 @@ pub struct ArticleSummary {
     pub slug: Slug,
     pub title: String,
     pub description: String,
+    #[serde(rename = "tagList")]
     pub tag_list: TagList,
     #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
