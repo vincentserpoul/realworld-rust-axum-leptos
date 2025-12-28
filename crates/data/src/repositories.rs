@@ -35,6 +35,7 @@ impl PostgresUsersRepository {
 
 #[async_trait]
 impl UsersRepository for PostgresUsersRepository {
+    #[tracing::instrument(skip(self), err)]
     async fn get_user_by_email(&self, email: &str) -> anyhow::Result<Option<User>> {
         let client = self.pool.get().await?;
         let user = crate::clorinde::queries::users::get_user_by_email()
@@ -44,6 +45,7 @@ impl UsersRepository for PostgresUsersRepository {
         Ok(user.map(|row| map_user!(row)))
     }
 
+    #[tracing::instrument(skip(self), err)]
     async fn get_user_by_username(&self, username: &str) -> anyhow::Result<Option<User>> {
         let client = self.pool.get().await?;
         let user = crate::clorinde::queries::users::get_user_by_username()
@@ -53,6 +55,7 @@ impl UsersRepository for PostgresUsersRepository {
         Ok(user.map(|row| map_user!(row)))
     }
 
+    #[tracing::instrument(skip(self), err)]
     async fn get_user_by_id(&self, id: UserId) -> anyhow::Result<Option<User>> {
         let client = self.pool.get().await?;
         let user = crate::clorinde::queries::users::get_user_by_id()
@@ -62,6 +65,7 @@ impl UsersRepository for PostgresUsersRepository {
         Ok(user.map(|row| map_user!(row)))
     }
 
+    #[tracing::instrument(skip(self, user), fields(user_id = ?user.id), err)]
     async fn create_user(&self, user: User) -> anyhow::Result<User> {
         let client = self.pool.get().await?;
         let created = crate::clorinde::queries::users::create_user()
@@ -78,6 +82,7 @@ impl UsersRepository for PostgresUsersRepository {
         Ok(map_user!(created))
     }
 
+    #[tracing::instrument(skip(self, user), fields(user_id = ?user.id), err)]
     async fn update_user(&self, user: User) -> anyhow::Result<User> {
         let client = self.pool.get().await?;
         let updated = crate::clorinde::queries::users::update_user()
@@ -96,6 +101,7 @@ impl UsersRepository for PostgresUsersRepository {
         Ok(map_user!(updated))
     }
 
+    #[tracing::instrument(skip(self), err)]
     async fn follow_user(&self, follower_id: UserId, followee_id: UserId) -> anyhow::Result<()> {
         let client = self.pool.get().await?;
         crate::clorinde::queries::users::follow_user()
@@ -104,6 +110,7 @@ impl UsersRepository for PostgresUsersRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self), err)]
     async fn unfollow_user(&self, follower_id: UserId, followee_id: UserId) -> anyhow::Result<()> {
         let client = self.pool.get().await?;
         crate::clorinde::queries::users::unfollow_user()
@@ -112,6 +119,7 @@ impl UsersRepository for PostgresUsersRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self), err)]
     async fn is_following(
         &self,
         follower_id: UserId,
@@ -140,6 +148,7 @@ impl PostgresArticlesRepository {
 
 #[async_trait]
 impl ArticlesRepository for PostgresArticlesRepository {
+    #[tracing::instrument(skip(self, article), fields(article_id = ?article.id, slug = ?article.slug), err)]
     async fn create_article(&self, article: Article) -> anyhow::Result<Article> {
         let client = self.pool.get().await?;
         let created = crate::clorinde::queries::articles::create_article()
@@ -183,6 +192,7 @@ impl ArticlesRepository for PostgresArticlesRepository {
         Ok(article)
     }
 
+    #[tracing::instrument(skip(self), err)]
     async fn get_article_by_slug(&self, slug: &str) -> anyhow::Result<Option<Article>> {
         let client = self.pool.get().await?;
         let article_row = crate::clorinde::queries::articles::get_article_by_slug()
@@ -208,6 +218,7 @@ impl ArticlesRepository for PostgresArticlesRepository {
         }
     }
 
+    #[tracing::instrument(skip(self), err)]
     async fn get_article_by_id(&self, id: ArticleId) -> anyhow::Result<Option<Article>> {
         let client = self.pool.get().await?;
         let article_row = crate::clorinde::queries::articles::get_article_by_id()
@@ -233,6 +244,7 @@ impl ArticlesRepository for PostgresArticlesRepository {
         }
     }
 
+    #[tracing::instrument(skip(self, article), fields(article_id = ?article.id, slug = ?article.slug), err)]
     async fn update_article(&self, article: Article) -> anyhow::Result<Article> {
         let client = self.pool.get().await?;
         let _updated = crate::clorinde::queries::articles::update_article()
@@ -272,6 +284,7 @@ impl ArticlesRepository for PostgresArticlesRepository {
         Ok(article)
     }
 
+    #[tracing::instrument(skip(self), err)]
     async fn delete_article(&self, id: ArticleId) -> anyhow::Result<()> {
         let client = self.pool.get().await?;
         crate::clorinde::queries::articles::delete_article()
@@ -280,6 +293,7 @@ impl ArticlesRepository for PostgresArticlesRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self, filters), fields(limit = filters.pagination.limit(), offset = filters.pagination.offset()), err)]
     async fn list_articles(&self, filters: ArticleFilters) -> anyhow::Result<ArticlesEnvelope> {
         let client = self.pool.get().await?;
         let limit = filters.pagination.limit() as i64;
@@ -361,6 +375,7 @@ impl ArticlesRepository for PostgresArticlesRepository {
         })
     }
 
+    #[tracing::instrument(skip(self, filters), fields(limit = filters.pagination.limit(), offset = filters.pagination.offset()), err)]
     async fn feed_articles(
         &self,
         user_id: UserId,
@@ -406,6 +421,7 @@ impl ArticlesRepository for PostgresArticlesRepository {
         })
     }
 
+    #[tracing::instrument(skip(self), err)]
     async fn favorite_article(&self, user_id: UserId, article_id: ArticleId) -> anyhow::Result<()> {
         let client = self.pool.get().await?;
         crate::clorinde::queries::articles::favorite_article()
@@ -414,6 +430,7 @@ impl ArticlesRepository for PostgresArticlesRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self), err)]
     async fn unfavorite_article(
         &self,
         user_id: UserId,
@@ -426,6 +443,7 @@ impl ArticlesRepository for PostgresArticlesRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self), err)]
     async fn is_favorited(&self, user_id: UserId, article_id: ArticleId) -> anyhow::Result<bool> {
         let client = self.pool.get().await?;
         let is_favorited = crate::clorinde::queries::articles::is_favorited()
@@ -449,6 +467,7 @@ impl PostgresCommentsRepository {
 
 #[async_trait]
 impl CommentsRepository for PostgresCommentsRepository {
+    #[tracing::instrument(skip(self, comment), fields(article_id = ?comment.article_id, author_id = ?comment.author_id), err)]
     async fn create_comment(&self, comment: Comment) -> anyhow::Result<Comment> {
         let client = self.pool.get().await?;
         let created = crate::clorinde::queries::comments::create_comment()
@@ -472,6 +491,7 @@ impl CommentsRepository for PostgresCommentsRepository {
         })
     }
 
+    #[tracing::instrument(skip(self), err)]
     async fn get_comments_by_article(&self, article_id: ArticleId) -> anyhow::Result<Vec<Comment>> {
         let client = self.pool.get().await?;
         let rows = crate::clorinde::queries::comments::get_comments_by_article()
@@ -489,6 +509,7 @@ impl CommentsRepository for PostgresCommentsRepository {
         }).collect())
     }
 
+    #[tracing::instrument(skip(self), err)]
     async fn delete_comment(&self, id: CommentId) -> anyhow::Result<()> {
         let client = self.pool.get().await?;
         crate::clorinde::queries::comments::delete_comment()
@@ -497,6 +518,7 @@ impl CommentsRepository for PostgresCommentsRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self), err)]
     async fn get_comment_by_id(&self, id: CommentId) -> anyhow::Result<Option<Comment>> {
         let client = self.pool.get().await?;
         let row = crate::clorinde::queries::comments::get_comment_by_id()
