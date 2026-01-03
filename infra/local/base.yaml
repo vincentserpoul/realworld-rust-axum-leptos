@@ -5,23 +5,22 @@ networks:
 volumes:
   valkey-data:
   openobserve-data:
-  postgres-data:
+  pg-data:
   iggy-data:
   restate-data:
+  grafana-data:
 
 services:
-  openobserve:
-    image: public.ecr.aws/zinclabs/openobserve:v0.30.2
-    restart: always
+  grafana:
+    image: grafana/otel-lgtm:0.13.0
     ports:
-      - "5080:5080"
-      - "5081:5081"
+      - "3001:3000"
+      - "4040:4040"
+      - "4317:4317"
+      - "4318:4318"
+      - "9090:9090"
     volumes:
-      - openobserve-data:/data # we need to use ../ and not ./ because docker-compose is run from the root of the first docker-compose file it finds
-    environment:
-      ZO_DATA_DIR: /data
-      ZO_ROOT_USER_EMAIL: test@po.com
-      ZO_ROOT_USER_PASSWORD: test # pragma: allowlist secret
+      - grafana-data:/data
     networks:
       - realworld
 
@@ -44,18 +43,22 @@ services:
       - realworld
 
   postgres:
-    image: postgres:18
-    restart: always
-    environment:
-      POSTGRES_DB: realworld
-      POSTGRES_USER: realworld
-      POSTGRES_PASSWORD: realworld # pragma: allowlist secret
+    image: postgres:18-alpine
     ports:
       - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/18/docker
+    environment:
+      POSTGRES_PASSWORD: localworld # pragma: allowlist secret
+      POSTGRES_DB: realworld
     networks:
-      - realworld
+      - "realworld"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-d", "realworld", "-U", "postgres"]
+      interval: "10s"
+      timeout: "30s"
+      retries: 5
+      start_period: "20s"
+    volumes:
+      - pg-data:/var/lib/postgresql
 
   # One-shot migration runner (SQL-first).
   # Usage:
@@ -66,9 +69,9 @@ services:
       - postgres
     environment:
       # Connect to the compose postgres service over the internal network.
-      DATABASE_URL: postgres://realworld:realworld@postgres:5432/realworld?sslmode=disable
+      DATABASE_URL: postgres://postgres:localworld@postgres:5432/realworld?sslmode=disable
     volumes:
-      - ../../crates/data/dbmate_migrations:/db/migrations:ro
+      - ../../crates/data/migrations:/db/migrations:ro
     entrypoint: ["dbmate", "--migrations-dir", "/db/migrations"]
     networks:
       - realworld

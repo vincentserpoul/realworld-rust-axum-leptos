@@ -1,11 +1,5 @@
 [database]
-url = "postgres://realworld:realworld@localhost:5432/realworld"
+url = "postgres://postgres:localworld@localhost:5432/realworld"
 
 [telemetry]
-otlp_endpoint = "http://localhost:5081" # OpenObserve OTLP gRPC endpoint
-
-# OpenObserve OTLP/gRPC metadata
-otlp_organization = "default"
-otlp_stream_name = "default"
-otlp_username = "test@po.com"
-otlp_password = "test"
+otlp_endpoint = "http://localhost:4317" # OpenObserve OTLP gRPC endpoint
